@@ -1,13 +1,78 @@
 <!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pequeña isla</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"></script>
-</head>
-<body>
-  <canvas id="webgl-canvas"></canvas>
-  <script src="isla.js"></script>
-</body>
+<html>
+
+  <head>
+
+    <meta charset="utf-8">
+    
+    <title> Pequeña isla </title>
+    
+    <style type="text/css">
+      canvas {border: 1px solid black;}
+    </style>
+
+    <script id="myVertexShader" 
+          type="x-shader/x-vertex">#version 300 es
+      
+      uniform mat4 projectionMatrix;
+      uniform mat4 modelViewMatrix;
+      
+      in vec3 VertexPosition;
+      
+      void main()  {
+        
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(VertexPosition, 1.0);
+      
+      }
+      
+    </script>
+    
+    <script id="myFragmentShader" 
+          type="x-shader/x-fragment">#version 300 es
+      
+      precision mediump float;
+
+      out vec4 fragmentColor;
+      
+      void main() {
+
+        fragmentColor = vec4(0.0,0.0,0.0,1.0);
+      
+      }
+      
+    </script>
+
+  </head>
+  
+  <body>
+
+    <button>Plano</button> 
+    <button>Cubo</button> 
+    <button>Tapa</button> 
+    <button>Cono</button> 
+    <button>Cilindro</button> 
+    <button>Esfera</button> 
+    <button>Toro</button> 
+    <button>Isla</button> <!-- Nuevo botón para la isla -->
+
+    <br>
+    <strong>Phi: </strong><span id="Phi"></span>&deg;
+    <br>
+    <strong>Zeta: </strong><span id="Zeta"></span>&deg;
+    <br>
+    <strong>Fovy: </strong><span id="Fovy"></span>&deg;
+    <br>
+    <strong>Radius: </strong><span id="Radius"></span>
+    <br>
+
+    <canvas id="myCanvas" width="600" height="600">
+      El Navegador no soporta HTML5
+    </canvas>
+    
+    <script src="gl-matrix-min.js"></script>
+    <script src="primitivasG.js"></script>
+    <script src="isla.js"></script>
+
+  </body>
+
 </html>
