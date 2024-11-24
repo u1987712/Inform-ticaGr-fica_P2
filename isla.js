@@ -1,6 +1,7 @@
 
 var gl, program;
-var myTorus, myIsland;
+var myTorus, myIsland, myPlane;
+var palm1, palm2, palm3;
 var myZeta = 0.0, myPhi = Math.PI/2.0, radius = 1.4, fovy = 1.4;
 var selectedPrimitive = exampleCone;
 
@@ -82,6 +83,7 @@ function drawWire(model) {
 
 }
 
+//ovalo que representa la isla
 function makeIsland(radiusX, radiusY, radiusZ, longitudeBands, latitudeBands) {
   const vertices = [];
   const indices = [];
@@ -115,6 +117,73 @@ function makeIsland(radiusX, radiusY, radiusZ, longitudeBands, latitudeBands) {
   return { vertices, indices };
 }
 
+
+//plano que representa el agua
+function makePlane(size) {
+    const halfSize = size / 2;
+    const vertices = [
+        -halfSize, 0.0, -halfSize,  // Esquina inferior izquierda
+         halfSize, 0.0, -halfSize,  // Esquina inferior derecha
+         halfSize, 0.0,  halfSize,  // Esquina superior derecha
+        -halfSize, 0.0,  halfSize   // Esquina superior izquierda
+    ];
+    const indices = [
+        0, 1, 2,  // Triángulo 1
+        0, 2, 3   // Triángulo 2
+    ];
+    return { vertices, indices };
+}
+
+//palmeras
+function makePalmTree(trunkHeight, trunkRadius, leafSize) {
+    const trunkVertices = [];
+    const trunkIndices = [];
+    const leafVertices = [];
+    const leafIndices = [];
+
+    // Tronco de la palmera (un cilindro)
+    const segments = 16;  // Aumentamos los segmentos para hacerlo más suave
+    for (let i = 0; i <= segments; i++) {
+        const angle = i * 2 * Math.PI / segments;
+        const x = trunkRadius * Math.cos(angle);  // Coordenada X
+        const z = trunkRadius * Math.sin(angle);  // Coordenada Z
+
+        // Vértices para la parte inferior y superior del tronco
+        trunkVertices.push(x, 0, z);  // Base inferior (y=0)
+        trunkVertices.push(x, trunkHeight, z);  // Base superior (y=trunkHeight)
+        
+        if (i < segments) {
+            const first = i * 2;
+            const second = (i + 1) * 2;
+            const third = first + 1;
+            const fourth = second + 1;
+
+            // Triángulos para las caras laterales del cilindro
+            trunkIndices.push(first, second, third);
+            trunkIndices.push(second, fourth, third);
+        }
+    }
+
+    // Hojas de la palmera (usando un tamaño de hoja más pequeño y un ángulo más amplio)
+    const leafBaseHeight = trunkHeight + 0.2; // Las hojas empiezan justo encima del tronco
+    const numLeaves = 6;  // Número de hojas
+    const leafAngleOffset = Math.PI / 6;  // Ángulo de desplazamiento para las hojas
+
+    for (let i = 0; i < numLeaves; i++) {
+        const angle = (i * 2 * Math.PI) / numLeaves + leafAngleOffset; // Ángulo de la hoja
+
+        // Vértices para las hojas
+        leafVertices.push(Math.cos(angle) * leafSize, leafBaseHeight, Math.sin(angle) * leafSize);
+        leafVertices.push(Math.cos(angle + Math.PI / 3) * leafSize * 1.5, leafBaseHeight + leafSize, Math.sin(angle + Math.PI / 3) * leafSize * 1.5);
+        leafVertices.push(Math.cos(angle - Math.PI / 3) * leafSize * 1.5, leafBaseHeight + leafSize, Math.sin(angle - Math.PI / 3) * leafSize * 1.5);
+    }
+
+    const totalVertices = trunkVertices.concat(leafVertices);
+    const totalIndices = trunkIndices.concat(leafIndices);
+
+    return { vertices: totalVertices, indices: totalIndices };
+}
+
 function initPrimitives() {
 
   initBuffers(examplePlane);
@@ -127,8 +196,19 @@ function initPrimitives() {
   myTorus = makeTorus(0.4, 1.0, 8, 12);
   initBuffers(myTorus);
 
-  myIsland = makeIsland(0.7, 0.2, 0.5, 20, 20); // Nueva isla
+  myIsland = makeIsland(1.5, 0.2, 1.5, 20, 20);
   initBuffers(myIsland);
+
+  myPlane = makePlane(5.0); // Un plano de 5x5 unidades
+  initBuffers(myPlane);
+
+  // Crear palmeras
+  palm1 = makePalmTree(0.3, 0.05, 0.1);
+  palm2 = makePalmTree(0.35, 0.05, 0.12);
+  palm3 = makePalmTree(0.3, 0.04, 0.1);
+  initBuffers(palm1);
+  initBuffers(palm2);
+  initBuffers(palm3);
 
 }
 
@@ -155,25 +235,52 @@ function getCameraMatrix() {
 }
 
 function drawScene() {
-    
-  gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.clear(gl.COLOR_BUFFER_BIT);
 
-  // establece la matriz de transformación de la proyección
-  setProjection();
+    setProjection();
 
-  // 1. calcula la matriz de transformación del modelo-vista
-  var modelMatrix     = mat4.create();
-  var modelViewMatrix = mat4.create();
-  mat4.fromScaling(modelMatrix, [0.5, 0.5, 0.5]);
-  mat4.multiply(modelViewMatrix, getCameraMatrix(), modelMatrix);
-    
-  // 2. envía la matriz calculada al shader de vértices
-  gl.uniformMatrix4fv(program.modelViewMatrixIndex, false, modelViewMatrix);
-    
-  // 3. dibuja la primitiva actualmente seleccionada
-  drawWire(selectedPrimitive);
+    // Dibujar el plano (agua)
+    var modelMatrix = mat4.create();
+    var modelViewMatrix = mat4.create();
+    mat4.fromTranslation(modelMatrix, [0, 0, 0]);
+    mat4.multiply(modelViewMatrix, getCameraMatrix(), modelMatrix);
+    gl.uniformMatrix4fv(program.modelViewMatrixIndex, false, modelViewMatrix);
+    gl.uniform4fv(gl.getUniformLocation(program, "uColor"), [0.0, 0.4, 0.7, 1.0]); // Azul
+    drawWire(myPlane);
 
+    // Dibujar la isla
+    modelMatrix = mat4.create();
+    modelViewMatrix = mat4.create();
+    mat4.fromScaling(modelMatrix, [0.5, 0.5, 0.5]);
+    mat4.multiply(modelViewMatrix, getCameraMatrix(), modelMatrix);
+    gl.uniformMatrix4fv(program.modelViewMatrixIndex, false, modelViewMatrix);
+    gl.uniform4fv(gl.getUniformLocation(program, "uColor"), [0.2, 0.6, 0.2, 1.0]); // Verde
+    drawWire(selectedPrimitive);
+
+    // Dibujar palmeras
+    const palmPositions = [
+        [0.1, 0.0, 0.2],   // Palm 1
+        [-0.2, 0.0, -0.3], // Palm 2
+        [0.3, 0.0, -0.4]   // Palm 3
+    ];
+
+    palmPositions.forEach((position, index) => {
+        modelMatrix = mat4.create();
+        modelViewMatrix = mat4.create();
+        mat4.fromTranslation(modelMatrix, position);  // Desplazar la palmera
+        mat4.multiply(modelViewMatrix, getCameraMatrix(), modelMatrix);
+        gl.uniformMatrix4fv(program.modelViewMatrixIndex, false, modelViewMatrix);
+
+        // Selecciona la palmera correspondiente
+        switch(index) {
+            case 0: drawWire(palm1); break;
+            case 1: drawWire(palm2); break;
+            case 2: drawWire(palm3); break;
+        }
+    });
 }
+
+
 
 function initHandlers() {
     
