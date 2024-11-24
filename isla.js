@@ -1,9 +1,8 @@
 
 var gl, program;
-var myTorus, myIsland, myPlane;
+var myIsland, myPlane;
 var palm1, palm2, palm3;
 var myZeta = 0.0, myPhi = Math.PI/2.0, radius = 1.4, fovy = 1.4;
-var selectedPrimitive = exampleCone;
 
 function getWebGLContext() {
 
@@ -185,17 +184,6 @@ function makePalmTree(trunkHeight, trunkRadius, leafSize) {
 }
 
 function initPrimitives() {
-
-  initBuffers(examplePlane);
-  initBuffers(exampleCube);
-  initBuffers(exampleCover);
-  initBuffers(exampleCone);
-  initBuffers(exampleCylinder);
-  initBuffers(exampleSphere);
-
-  myTorus = makeTorus(0.4, 1.0, 8, 12);
-  initBuffers(myTorus);
-
   myIsland = makeIsland(1.5, 0.2, 1.5, 20, 20);
   initBuffers(myIsland);
 
@@ -255,7 +243,7 @@ function drawScene() {
     mat4.multiply(modelViewMatrix, getCameraMatrix(), modelMatrix);
     gl.uniformMatrix4fv(program.modelViewMatrixIndex, false, modelViewMatrix);
     gl.uniform4fv(gl.getUniformLocation(program, "uColor"), [0.2, 0.6, 0.2, 1.0]); // Verde
-    drawWire(selectedPrimitive);
+    drawWire(myIsland);
 
     // Dibujar palmeras
     const palmPositions = [
@@ -283,118 +271,82 @@ function drawScene() {
 
 
 function initHandlers() {
-    
-  var mouseDown = false;
-  var lastMouseX;
-  var lastMouseY;
+    var mouseDown = false;
+    var lastMouseX;
+    var lastMouseY;
 
-  var canvas     = document.getElementById("myCanvas");
-  var htmlPhi    = document.getElementById("Phi");
-  var htmlZeta   = document.getElementById("Zeta");
-  var htmlRadius = document.getElementById("Radius");
-  var htmlFovy   = document.getElementById("Fovy");
+    var canvas     = document.getElementById("myCanvas");
+    var htmlPhi    = document.getElementById("Phi");
+    var htmlZeta   = document.getElementById("Zeta");
+    var htmlRadius = document.getElementById("Radius");
+    var htmlFovy   = document.getElementById("Fovy");
 
-  htmlPhi.innerHTML    = (myPhi  * 180 / Math.PI).toFixed(1);
-  htmlZeta.innerHTML   = (myZeta * 180 / Math.PI).toFixed(1);
-  htmlRadius.innerHTML = radius.toFixed(1);
-  htmlFovy.innerHTML   = (fovy * 180 / Math.PI).toFixed(1);
+    htmlPhi.innerHTML    = (myPhi  * 180 / Math.PI).toFixed(1);
+    htmlZeta.innerHTML   = (myZeta * 180 / Math.PI).toFixed(1);
+    htmlRadius.innerHTML = radius.toFixed(1);
+    htmlFovy.innerHTML   = (fovy * 180 / Math.PI).toFixed(1);
 
-  canvas.addEventListener("mousedown",
-    function(event) {
-      mouseDown  = true;
-      lastMouseX = event.clientX;
-      lastMouseY = event.clientY;
-    },
-    false);
+    canvas.addEventListener("mousedown", function(event) {
+        mouseDown  = true;
+        lastMouseX = event.clientX;
+        lastMouseY = event.clientY;
+    }, false);
 
-  canvas.addEventListener("mouseup",
-    function() {
-      mouseDown = false;
-    },
-    false);
-  
-  canvas.addEventListener("wheel",
-    function (event) {
-      
-      var delta = 0.0;
+    canvas.addEventListener("mouseup", function() {
+        mouseDown = false;
+    }, false);
 
-      if (event.deltaMode == 0)
-        delta = event.deltaY * 0.001;
-      else if (event.deltaMode == 1)
-        delta = event.deltaY * 0.03;
-      else
-        delta = event.deltaY;
+    canvas.addEventListener("wheel", function (event) {
+        var delta = 0.0;
 
-      if (event.shiftKey == 1) { // fovy
-          
-        fovy *= Math.exp(-delta)
-        fovy = Math.max (0.1, Math.min(3.0, fovy));
-        
-        htmlFovy.innerHTML = (fovy * 180 / Math.PI).toFixed(1);
-        
-      } else {
-        
-        radius *= Math.exp(-delta);
-        radius  = Math.max(Math.min(radius, 30), 0.05);
-        
-        htmlRadius.innerHTML = radius.toFixed(1);
-        
-      }
-      
-      event.preventDefault();
-      requestAnimationFrame(drawScene);
+        if (event.deltaMode == 0)
+            delta = event.deltaY * 0.001;
+        else if (event.deltaMode == 1)
+            delta = event.deltaY * 0.03;
+        else
+            delta = event.deltaY;
+
+        if (event.shiftKey == 1) { // fovy
+            fovy *= Math.exp(-delta)
+            fovy = Math.max (0.1, Math.min(3.0, fovy));
+            htmlFovy.innerHTML = (fovy * 180 / Math.PI).toFixed(1);
+        } else {
+            radius *= Math.exp(-delta);
+            radius  = Math.max(Math.min(radius, 30), 0.05);
+            htmlRadius.innerHTML = radius.toFixed(1);
+        }
+
+        event.preventDefault();
+        requestAnimationFrame(drawScene);
 
     }, false);
 
-  canvas.addEventListener("mousemove",
-    function (event) {
-      
-      if (!mouseDown) {
-        return;
-      }
-      
-      var newX = event.clientX;
-      var newY = event.clientY;
-      
-      myZeta -= (newX - lastMouseX) * 0.005;
-      myPhi  -= (newY - lastMouseY) * 0.005;
-        
-      var margen = 0.01;
-      myPhi = Math.min (Math.max(myPhi, margen), Math.PI - margen);
-        
-      htmlPhi.innerHTML  = (myPhi  * 180 / Math.PI).toFixed(1);
-      htmlZeta.innerHTML = (myZeta * 180 / Math.PI).toFixed(1);
-     
-      lastMouseX = newX
-      lastMouseY = newY;
-      
-      event.preventDefault();
-      requestAnimationFrame(drawScene);
-      
-    },
-    false);
+    canvas.addEventListener("mousemove", function (event) {
+        if (!mouseDown) {
+            return;
+        }
 
-  var botones = document.getElementsByTagName("button");
-  
-  for (var i = 0; i < botones.length; i++) {
-    botones[i].addEventListener("click",
-    function(){
-      switch (this.innerHTML) {
-        case "Plano":    selectedPrimitive = examplePlane;    break;
-        case "Cubo":     selectedPrimitive = exampleCube;     break;
-        case "Tapa":     selectedPrimitive = exampleCover;    break;
-        case "Cono":     selectedPrimitive = exampleCone;     break;
-        case "Cilindro": selectedPrimitive = exampleCylinder; break;
-        case "Esfera":   selectedPrimitive = exampleSphere;   break;
-        case "Toro":     selectedPrimitive = myTorus;         break;
-        case "Isla":     selectedPrimitive = myIsland;        break;
-      }
-      requestAnimationFrame(drawScene);
-    },
-    false);
-  }
-  
-}        
+        var newX = event.clientX;
+        var newY = event.clientY;
+
+        myZeta -= (newX - lastMouseX) * 0.005;
+        myPhi  -= (newY - lastMouseY) * 0.005;
+
+        var margen = 0.01;
+        myPhi = Math.min (Math.max(myPhi, margen), Math.PI - margen);
+
+        htmlPhi.innerHTML  = (myPhi  * 180 / Math.PI).toFixed(1);
+        htmlZeta.innerHTML = (myZeta * 180 / Math.PI).toFixed(1);
+
+        lastMouseX = newX
+        lastMouseY = newY;
+
+        event.preventDefault();
+        requestAnimationFrame(drawScene);
+
+    }, false);
+}
+       
 
 function initWebGL() {
     
