@@ -163,25 +163,33 @@ function makePalmTree(trunkHeight, trunkRadius, leafSize) {
         }
     }
 
-    // Hojas de la palmera (usando un tamaño de hoja más pequeño y un ángulo más amplio)
+    // Hojas de la palmera (polígonos de triángulos)
     const leafBaseHeight = trunkHeight + 0.2; // Las hojas empiezan justo encima del tronco
     const numLeaves = 6;  // Número de hojas
     const leafAngleOffset = Math.PI / 6;  // Ángulo de desplazamiento para las hojas
 
+    // Generamos las hojas como triángulos distribuidos radialmente
     for (let i = 0; i < numLeaves; i++) {
         const angle = (i * 2 * Math.PI) / numLeaves + leafAngleOffset; // Ángulo de la hoja
 
-        // Vértices para las hojas
+        // Los vértices de cada hoja
         leafVertices.push(Math.cos(angle) * leafSize, leafBaseHeight, Math.sin(angle) * leafSize);
-        leafVertices.push(Math.cos(angle + Math.PI / 3) * leafSize * 1.5, leafBaseHeight + leafSize, Math.sin(angle + Math.PI / 3) * leafSize * 1.5);
-        leafVertices.push(Math.cos(angle - Math.PI / 3) * leafSize * 1.5, leafBaseHeight + leafSize, Math.sin(angle - Math.PI / 3) * leafSize * 1.5);
+        leafVertices.push(Math.cos(angle + Math.PI / 3) * leafSize * 1.5, leafBaseHeight, Math.sin(angle + Math.PI / 3) * leafSize * 1.5);
+        leafVertices.push(Math.cos(angle - Math.PI / 3) * leafSize * 1.5, leafBaseHeight, Math.sin(angle - Math.PI / 3) * leafSize * 1.5);
+
+        // Añadir los índices de cada hoja para formar los triángulos
+        const startIndex = leafVertices.length / 3 - 3;  // El índice del primer vértice de la hoja
+        leafIndices.push(startIndex, startIndex + 1, startIndex + 2);  // Conectar los tres vértices
     }
 
+    // Los índices del tronco se mantienen igual, pero los de las hojas se añaden ahora
     const totalVertices = trunkVertices.concat(leafVertices);
     const totalIndices = trunkIndices.concat(leafIndices);
 
     return { vertices: totalVertices, indices: totalIndices };
 }
+
+
 
 function initPrimitives() {
   myIsland = makeIsland(1.5, 0.2, 1.5, 20, 20);
@@ -247,9 +255,9 @@ function drawScene() {
 
     // Dibujar palmeras
     const palmPositions = [
-        [0.1, 0.0, 0.2],   // Palm 1
-        [-0.2, 0.0, -0.3], // Palm 2
-        [0.3, 0.0, -0.4]   // Palm 3
+        [0.1, 0.05, 0.2],   // Palm 1
+        [-0.2, 0.05, -0.3], // Palm 2
+        [0.3, 0.05, -0.4]   // Palm 3
     ];
 
     palmPositions.forEach((position, index) => {
