@@ -1,3 +1,4 @@
+//Gemma Reina, u1987712
 
 var gl, program;
 var myIsland, myPlane;
@@ -39,17 +40,17 @@ function initShaders() {
   program = gl.createProgram();
   gl.attachShader(program, vertexShader);
   gl.attachShader(program, fragmentShader);
-  
   gl.linkProgram(program);
-    
   gl.useProgram(program);
-    
+
   program.vertexPositionAttribute = gl.getAttribLocation(program, "VertexPosition");
   gl.enableVertexAttribArray(program.vertexPositionAttribute);
 
-  program.modelViewMatrixIndex  = gl.getUniformLocation(program,"modelViewMatrix");
-  program.projectionMatrixIndex = gl.getUniformLocation(program,"projectionMatrix");
-
+  program.modelViewMatrixIndex = gl.getUniformLocation(program, "modelViewMatrix");
+  program.projectionMatrixIndex = gl.getUniformLocation(program, "projectionMatrix");
+  program.displayModeIndex = gl.getUniformLocation(program, "displayMode");
+  program.colorAttribute = gl.getAttribLocation(program, "VertexColor");
+  gl.enableVertexAttribArray(program.colorAttribute);
 }
 
 function initRendering() {
@@ -61,133 +62,148 @@ function initRendering() {
 
 function initBuffers(model) {
     
-  model.idBufferVertices = gl.createBuffer ();
-  gl.bindBuffer (gl.ARRAY_BUFFER, model.idBufferVertices);
-  gl.bufferData (gl.ARRAY_BUFFER, new Float32Array(model.vertices), gl.STATIC_DRAW);
-    
-  model.idBufferIndices = gl.createBuffer ();
-  gl.bindBuffer (gl.ELEMENT_ARRAY_BUFFER, model.idBufferIndices);
-  gl.bufferData (gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(model.indices), gl.STATIC_DRAW);
+  model.idBufferVertices = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, model.idBufferVertices);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(model.vertices), gl.STATIC_DRAW);
 
+  model.idBufferIndices = gl.createBuffer();
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, model.idBufferIndices);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(model.indices), gl.STATIC_DRAW);
+
+  if (model.colors) {
+      model.idBufferColors = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, model.idBufferColors);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(model.colors), gl.STATIC_DRAW);
+  }
 }
 
-function drawWire(model) {
-    
-  gl.bindBuffer (gl.ARRAY_BUFFER, model.idBufferVertices);
-  gl.vertexAttribPointer (program.vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
-    
-  gl.bindBuffer (gl.ELEMENT_ARRAY_BUFFER, model.idBufferIndices);
-  for (var i = 0; i < model.indices.length; i += 3)
-    gl.drawElements (gl.LINE_LOOP, 3, gl.UNSIGNED_SHORT, i*2);
+function draw(model) {
+  gl.bindBuffer(gl.ARRAY_BUFFER, model.idBufferVertices);
+  gl.vertexAttribPointer(program.vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
 
+  if (model.idBufferColors) {
+      gl.bindBuffer(gl.ARRAY_BUFFER, model.idBufferColors);
+      gl.vertexAttribPointer(program.colorAttribute, 3, gl.FLOAT, false, 0, 0);
+  }
+
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, model.idBufferIndices);
+
+  if (gl.getUniform(program, program.displayModeIndex) === 0) {
+      // Wireframe: Dibujar solo los bordes
+      for (var i = 0; i < model.indices.length; i += 3) {
+          gl.drawElements(gl.LINE_LOOP, 3, gl.UNSIGNED_SHORT, i * 2);
+      }
+  } else {
+      // Color: Dibujar polígonos completos
+      gl.drawElements(gl.TRIANGLES, model.indices.length, gl.UNSIGNED_SHORT, 0);
+  }
 }
 
-//ovalo que representa la isla
+
+//Isla
 function makeIsland(radiusX, radiusY, radiusZ, longitudeBands, latitudeBands) {
   const vertices = [];
   const indices = [];
+  const colors = []; // Arreglo para almacenar colores
 
   for (let lat = 0; lat <= latitudeBands; lat++) {
-    const theta = lat * Math.PI / latitudeBands;
-    const sinTheta = Math.sin(theta);
-    const cosTheta = Math.cos(theta);
+      const theta = lat * Math.PI / latitudeBands;
+      const sinTheta = Math.sin(theta);
+      const cosTheta = Math.cos(theta);
 
-    for (let long = 0; long <= longitudeBands; long++) {
-      const phi = long * 2 * Math.PI / longitudeBands;
-      const sinPhi = Math.sin(phi);
-      const cosPhi = Math.cos(phi);
+      for (let long = 0; long <= longitudeBands; long++) {
+          const phi = long * 2 * Math.PI / longitudeBands;
+          const sinPhi = Math.sin(phi);
+          const cosPhi = Math.cos(phi);
 
-      const x = radiusX * cosPhi * sinTheta;
-      const y = radiusY * cosTheta;
-      const z = radiusZ * sinPhi * sinTheta;
+          const x = radiusX * cosPhi * sinTheta;
+          const y = radiusY * cosTheta;
+          const z = radiusZ * sinPhi * sinTheta;
 
-      vertices.push(x, y, z);
+          vertices.push(x, y, z);
+          colors.push(0.8, 0.5, 0.2);  // Marrón arena para la isla
 
-      if (lat < latitudeBands && long < longitudeBands) {
-        const first = lat * (longitudeBands + 1) + long;
-        const second = first + longitudeBands + 1;
+          if (lat < latitudeBands && long < longitudeBands) {
+              const first = lat * (longitudeBands + 1) + long;
+              const second = first + longitudeBands + 1;
 
-        indices.push(first, second, first + 1);
-        indices.push(second, second + 1, first + 1);
+              indices.push(first, second, first + 1);
+              indices.push(second, second + 1, first + 1);
+          }
       }
-    }
   }
 
-  return { vertices, indices };
+  return { vertices, indices, colors };
 }
 
-
-//plano que representa el agua
+//Agua
 function makePlane(size) {
-    const halfSize = size / 2;
-    const vertices = [
-        -halfSize, 0.0, -halfSize,  // Esquina inferior izquierda
-         halfSize, 0.0, -halfSize,  // Esquina inferior derecha
-         halfSize, 0.0,  halfSize,  // Esquina superior derecha
-        -halfSize, 0.0,  halfSize   // Esquina superior izquierda
-    ];
-    const indices = [
-        0, 1, 2,  // Triángulo 1
-        0, 2, 3   // Triángulo 2
-    ];
-    return { vertices, indices };
+  const halfSize = size / 2;
+  const vertices = [
+      -halfSize, 0.0, -halfSize, 
+       halfSize, 0.0, -halfSize,
+       halfSize, 0.0,  halfSize,
+      -halfSize, 0.0,  halfSize
+  ];
+  const indices = [
+      0, 1, 2,  
+      0, 2, 3
+  ];
+  const colors = [];
+  colors.push(0.0, 0.0, 1.0);  // Azul para el agua
+  return { vertices, indices, colors };
 }
 
-//palmeras
+//Palmeras
 function makePalmTree(trunkHeight, trunkRadius, leafSize) {
-    const trunkVertices = [];
-    const trunkIndices = [];
-    const leafVertices = [];
-    const leafIndices = [];
+  const trunkVertices = [];
+  const trunkIndices = [];
+  const leafVertices = [];
+  const leafIndices = [];
+  const colors = []; // Arreglo para almacenar colores
 
-    // Tronco de la palmera (un cilindro)
-    const segments = 16;  // Aumentamos los segmentos para hacerlo más suave
-    for (let i = 0; i <= segments; i++) {
-        const angle = i * 2 * Math.PI / segments;
-        const x = trunkRadius * Math.cos(angle);  // Coordenada X
-        const z = trunkRadius * Math.sin(angle);  // Coordenada Z
+  const segments = 16;
+  for (let i = 0; i <= segments; i++) {
+      const angle = i * 2 * Math.PI / segments;
+      const x = trunkRadius * Math.cos(angle);
+      const z = trunkRadius * Math.sin(angle);
 
-        // Vértices para la parte inferior y superior del tronco
-        trunkVertices.push(x, 0, z);  // Base inferior (y=0)
-        trunkVertices.push(x, trunkHeight, z);  // Base superior (y=trunkHeight)
-        
-        if (i < segments) {
-            const first = i * 2;
-            const second = (i + 1) * 2;
-            const third = first + 1;
-            const fourth = second + 1;
+      trunkVertices.push(x, 0, z); 
+      trunkVertices.push(x, trunkHeight, z); 
+      
+      if (i < segments) {
+          const first = i * 2;
+          const second = (i + 1) * 2;
+          const third = first + 1;
+          const fourth = second + 1;
 
-            // Triángulos para las caras laterales del cilindro
-            trunkIndices.push(first, second, third);
-            trunkIndices.push(second, fourth, third);
-        }
-    }
+          trunkIndices.push(first, second, third);
+          trunkIndices.push(second, fourth, third);
+      }
+  }
 
-    // Hojas de la palmera (polígonos de triángulos)
-    const leafBaseHeight = trunkHeight + 0.2; // Las hojas empiezan justo encima del tronco
-    const numLeaves = 6;  // Número de hojas
-    const leafAngleOffset = Math.PI / 6;  // Ángulo de desplazamiento para las hojas
+  const leafBaseHeight = trunkHeight + 0.2;
+  const numLeaves = 6;
+  const leafAngleOffset = Math.PI / 6;
 
-    // Generamos las hojas como triángulos distribuidos radialmente
-    for (let i = 0; i < numLeaves; i++) {
-        const angle = (i * 2 * Math.PI) / numLeaves + leafAngleOffset; // Ángulo de la hoja
+  for (let i = 0; i < numLeaves; i++) {
+      const angle = (i * 2 * Math.PI) / numLeaves + leafAngleOffset;
 
-        // Los vértices de cada hoja
-        leafVertices.push(Math.cos(angle) * leafSize, leafBaseHeight, Math.sin(angle) * leafSize);
-        leafVertices.push(Math.cos(angle + Math.PI / 3) * leafSize * 1.5, leafBaseHeight, Math.sin(angle + Math.PI / 3) * leafSize * 1.5);
-        leafVertices.push(Math.cos(angle - Math.PI / 3) * leafSize * 1.5, leafBaseHeight, Math.sin(angle - Math.PI / 3) * leafSize * 1.5);
+      leafVertices.push(Math.cos(angle) * leafSize, leafBaseHeight, Math.sin(angle) * leafSize);
+      leafVertices.push(Math.cos(angle + Math.PI / 3) * leafSize * 1.5, leafBaseHeight, Math.sin(angle + Math.PI / 3) * leafSize * 1.5);
+      leafVertices.push(Math.cos(angle - Math.PI / 3) * leafSize * 1.5, leafBaseHeight, Math.sin(angle - Math.PI / 3) * leafSize * 1.5);
 
-        // Añadir los índices de cada hoja para formar los triángulos
-        const startIndex = leafVertices.length / 3 - 3;  // El índice del primer vértice de la hoja
-        leafIndices.push(startIndex, startIndex + 1, startIndex + 2);  // Conectar los tres vértices
-    }
+      const startIndex = leafVertices.length / 3 - 3;
+      leafIndices.push(startIndex, startIndex + 1, startIndex + 2);
+  }
 
-    // Los índices del tronco se mantienen igual, pero los de las hojas se añaden ahora
-    const totalVertices = trunkVertices.concat(leafVertices);
-    const totalIndices = trunkIndices.concat(leafIndices);
+  const totalVertices = trunkVertices.concat(leafVertices);
+  const totalIndices = trunkIndices.concat(leafIndices);
+  colors.push(0.0, 1.0, 0.0);  // Verde para las palmeras
 
-    return { vertices: totalVertices, indices: totalIndices };
+  return { vertices: totalVertices, indices: totalIndices, colors };
 }
+
 
 
 
@@ -221,7 +237,6 @@ function setProjection() {
 
 function getCameraMatrix() {
 
-  // coordenadas esféricas a rectangulares: https://en.wikipedia.org/wiki/Spherical_coordinate_system
   var x = radius * Math.sin(myPhi) * Math.sin(myZeta);
   var y = radius * Math.cos(myPhi);
   var z = radius * Math.sin(myPhi) * Math.cos(myZeta);
@@ -232,8 +247,8 @@ function getCameraMatrix() {
 
 function drawScene() {
     gl.clear(gl.COLOR_BUFFER_BIT);
-
     setProjection();
+    gl.uniform1i(program.displayModeIndex, 0); // Establecer el modo predeterminado (Wireframe)
 
     // Dibujar el plano (agua)
     var modelMatrix = mat4.create();
@@ -241,8 +256,7 @@ function drawScene() {
     mat4.fromTranslation(modelMatrix, [0, 0, 0]);
     mat4.multiply(modelViewMatrix, getCameraMatrix(), modelMatrix);
     gl.uniformMatrix4fv(program.modelViewMatrixIndex, false, modelViewMatrix);
-    gl.uniform4fv(gl.getUniformLocation(program, "uColor"), [0.0, 0.4, 0.7, 1.0]); // Azul
-    drawWire(myPlane);
+    draw(myPlane);
 
     // Dibujar la isla
     modelMatrix = mat4.create();
@@ -250,8 +264,7 @@ function drawScene() {
     mat4.fromScaling(modelMatrix, [0.5, 0.5, 0.5]);
     mat4.multiply(modelViewMatrix, getCameraMatrix(), modelMatrix);
     gl.uniformMatrix4fv(program.modelViewMatrixIndex, false, modelViewMatrix);
-    gl.uniform4fv(gl.getUniformLocation(program, "uColor"), [0.2, 0.6, 0.2, 1.0]); // Verde
-    drawWire(myIsland);
+    draw(myIsland);
 
     // Dibujar palmeras
     const palmPositions = [
@@ -266,12 +279,12 @@ function drawScene() {
         mat4.fromTranslation(modelMatrix, position);  // Desplazar la palmera
         mat4.multiply(modelViewMatrix, getCameraMatrix(), modelMatrix);
         gl.uniformMatrix4fv(program.modelViewMatrixIndex, false, modelViewMatrix);
-
+        
         // Selecciona la palmera correspondiente
         switch(index) {
-            case 0: drawWire(palm1); break;
-            case 1: drawWire(palm2); break;
-            case 2: drawWire(palm3); break;
+            case 0: draw(palm1); break;
+            case 1: draw(palm2); break;
+            case 2: draw(palm3); break;
         }
     });
 }
@@ -353,6 +366,21 @@ function initHandlers() {
         requestAnimationFrame(drawScene);
 
     }, false);
+
+      document.getElementById('wireframe').addEventListener('click', function() {
+          gl.uniform1i(gl.getUniformLocation(program, "displayMode"), 0); // Wireframe
+          requestAnimationFrame(drawScene);
+      });
+  
+      document.getElementById('color').addEventListener('click', function() {
+          gl.uniform1i(gl.getUniformLocation(program, "displayMode"), 1); // Color
+          requestAnimationFrame(drawScene);
+      });
+  
+      document.getElementById('normal').addEventListener('click', function() {
+          gl.uniform1i(gl.getUniformLocation(program, "displayMode"), 2); // Normal Shader
+          requestAnimationFrame(drawScene);
+      });
 }
        
 

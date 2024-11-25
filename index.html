@@ -1,3 +1,4 @@
+<!--Gemma Reina, u1987712-->
 <!DOCTYPE html>
 <html>
 
@@ -14,43 +15,56 @@
     <script id="myVertexShader" 
           type="x-shader/x-vertex">#version 300 es
       
-      uniform mat4 projectionMatrix;
-      uniform mat4 modelViewMatrix;
-      
-      in vec3 VertexPosition;
-      
-      void main()  {
-        
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(VertexPosition, 1.0);
-      
-      }
-      
+          precision mediump float;
+
+          uniform mat4 projectionMatrix;
+          uniform mat4 modelViewMatrix;
+
+          in vec3 VertexPosition;
+          in vec4 VertexColor;
+
+          out vec4 fragColor;
+
+          uniform int displayMode; // 0 = Wireframe, 1 = Color, 2 = Normal
+
+          void main() {
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(VertexPosition, 1.0);
+    
+              if (displayMode == 0) {
+                  // Wireframe: Dibujar solo los bordes (líneas)
+                  fragColor = vec4(0.0, 0.0, 0.0, 1.0); // Color de línea (negro)
+              } else if (displayMode == 1) {
+                  // Color: Colorear las caras con el color del vértice
+                  fragColor = VertexColor; // Usar el color del vértice
+              } else if (displayMode == 2) {
+                  // Normal Shader: Mostrar en colores de normales (como debug)
+                  fragColor = vec4(normalize(VertexPosition), 1.0); // Colorear según las normales
+              }
+          }
     </script>
     
     <script id="myFragmentShader" 
           type="x-shader/x-fragment">#version 300 es
-      
-      precision mediump float;
 
-      uniform vec4 uColor;
+          precision mediump float;
 
-      out vec4 fragmentColor;
-      
-      void main() {
+          in vec4 fragColor;
+          out vec4 color;
 
-        fragmentColor = uColor;
-      
-      }
-      
+          void main() {
+              color = fragColor;  // Mostrar el color según el modo seleccionado
+          }
     </script>
 
   </head>
   
   <body>
-
-    <button>Polígons</button>
-    <button>Wireframes</button>
-    <button>Normal shader</button>
+    
+    <div id="controls">
+        <button id="wireframe">Wireframe</button>
+        <button id="color">Poligons</button>
+        <button id="normal">Normal Shader</button>
+    </div>
 
     <br>
     <strong>Phi: </strong><span id="Phi"></span>&deg;
