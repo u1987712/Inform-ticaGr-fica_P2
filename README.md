@@ -11,5 +11,3 @@ La práctica debía contener:
 Lo cierto es, que esta práctica solo cumple con la primera condición (y a duras penas - los cilindros debían ser PALMERAS, pero no he encontrado la razón por la cual las hojas no se dibujan).
 El código contiene la intención de implementar 3 modos de visualización, pero por alguna razón solo se muestra con wireframes.
 La cámara es la vista aérea sacada de los ejemplos.
-
-Sé que es un 0/10, pero prefiero presentar algo a no presentar nada.
